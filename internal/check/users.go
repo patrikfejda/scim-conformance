@@ -30,6 +30,10 @@ func (r *Runner) UserLifecycle(ctx context.Context, caps Capabilities) []Result 
 	results = append(results, r.getUser(ctx, userID, userName))
 	results = append(results, r.getMissingUser(ctx))
 	results = append(results, r.filterUser(ctx, userName, caps))
+	results = append(results, r.filterNoMatch(ctx, caps))
+	results = append(results, r.listAll(ctx))
+	results = append(results, r.pagination(ctx)...)
+	results = append(results, r.attributesParam(ctx, userID))
 	results = append(results, r.replaceUser(ctx, userID, userName)...)
 	results = append(results, r.patchUser(ctx, userID, caps))
 	results = append(results, r.deleteUser(ctx, userID)...)
@@ -406,10 +410,172 @@ func (r *Runner) deleteUser(ctx context.Context, id string) []Result {
 	return []Result{del, gone}
 }
 
+// filterNoMatch encodes a common real-world bug: a filter matching
+// nothing must yield an empty ListResponse, not an error or 404.
+func (r *Runner) filterNoMatch(ctx context.Context, caps Capabilities) Result {
+	res := Result{
+		ID:          "user-filter-nomatch",
+		Description: "a filter matching no users returns 200 with an empty ListResponse (totalResults 0)",
+		Reference:   "RFC 7644 §3.4.2.2",
+		Severity:    Required,
+	}
+	if !caps.FilterSupported {
+		res.Status = Skip
+		res.Detail = "server declares filter.supported=false"
+		return res
+	}
+	query := url.QueryEscape(`userName eq "scim-conformance-no-such-user"`)
+	resp, err := r.Client.Do(ctx, http.MethodGet, "/Users?filter="+query, nil)
+	if err != nil {
+		res.Status = Error
+		res.Detail = err.Error()
+		return res
+	}
+	body, jsonErr := resp.JSON()
+	switch {
+	case resp.StatusCode != http.StatusOK:
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("expected 200, got %d", resp.StatusCode)
+	case jsonErr != nil:
+		res.Status = Fail
+		res.Detail = jsonErr.Error()
+	case !hasSchema(body, urnListResponse):
+		res.Status = Fail
+		res.Detail = "response is not a ListResponse"
+	case numberAt(body, "totalResults") != 0:
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("expected totalResults 0, got %v", body["totalResults"])
+	default:
+		res.Status = Pass
+	}
+	return res
+}
+
+func (r *Runner) listAll(ctx context.Context) Result {
+	res := Result{
+		ID:          "user-list-all",
+		Description: "GET /Users without parameters returns a ListResponse with totalResults and Resources",
+		Reference:   "RFC 7644 §3.4.2",
+		Severity:    Required,
+	}
+	resp, err := r.Client.Do(ctx, http.MethodGet, "/Users", nil)
+	if err != nil {
+		res.Status = Error
+		res.Detail = err.Error()
+		return res
+	}
+	body, jsonErr := resp.JSON()
+	switch {
+	case resp.StatusCode != http.StatusOK:
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("expected 200, got %d", resp.StatusCode)
+	case jsonErr != nil:
+		res.Status = Fail
+		res.Detail = jsonErr.Error()
+	case !hasSchema(body, urnListResponse):
+		res.Status = Fail
+		res.Detail = "response is not a ListResponse"
+	case numberAt(body, "totalResults") < 1:
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("expected totalResults >= 1 (a test user exists), got %v", body["totalResults"])
+	default:
+		if _, ok := body["Resources"].([]any); !ok {
+			res.Status = Fail
+			res.Detail = "Resources attribute missing or not an array"
+			return res
+		}
+		res.Status = Pass
+	}
+	return res
+}
+
+// pagination checks RFC 7644 §3.4.2.4: a paged response MUST include
+// startIndex and itemsPerPage, and count is an upper bound on the number
+// of returned resources.
+func (r *Runner) pagination(ctx context.Context) []Result {
+	shape := Result{
+		ID:          "user-pagination-shape",
+		Description: "a paged request (startIndex=1&count=1) returns startIndex and itemsPerPage",
+		Reference:   "RFC 7644 §3.4.2.4",
+		Severity:    Required,
+	}
+	bound := Result{
+		ID:          "user-pagination-count-bound",
+		Description: "a paged request returns no more resources than count",
+		Reference:   "RFC 7644 §3.4.2.4",
+		Severity:    Required,
+	}
+	resp, err := r.Client.Do(ctx, http.MethodGet, "/Users?startIndex=1&count=1", nil)
+	if err != nil {
+		shape.Status, shape.Detail = Error, err.Error()
+		bound.Status, bound.Detail = Skip, "pagination request failed"
+		return []Result{shape, bound}
+	}
+	body, jsonErr := resp.JSON()
+	if resp.StatusCode != http.StatusOK || jsonErr != nil {
+		shape.Status = Fail
+		shape.Detail = fmt.Sprintf("expected 200 with JSON body, got %d", resp.StatusCode)
+		bound.Status, bound.Detail = Skip, "pagination request unusable"
+		return []Result{shape, bound}
+	}
+	_, hasStart := body["startIndex"]
+	_, hasPer := body["itemsPerPage"]
+	if !hasStart || !hasPer {
+		shape.Status = Fail
+		shape.Detail = fmt.Sprintf("startIndex present: %v, itemsPerPage present: %v", hasStart, hasPer)
+	} else {
+		shape.Status = Pass
+	}
+	resources, _ := body["Resources"].([]any)
+	if len(resources) > 1 {
+		bound.Status = Fail
+		bound.Detail = fmt.Sprintf("count=1 but %d resources returned", len(resources))
+	} else {
+		bound.Status = Pass
+	}
+	return []Result{shape, bound}
+}
+
+// attributesParam checks RFC 7644 §3.4.2.5 attribute selection. Wrong or
+// missing support is widespread, so the "others omitted" half is what the
+// deviation corpus is for — the check stays advisory.
+func (r *Runner) attributesParam(ctx context.Context, id string) Result {
+	res := Result{
+		ID:          "user-attributes-param",
+		Description: "GET /Users/{id}?attributes=userName returns userName and omits unrequested attributes",
+		Reference:   "RFC 7644 §3.4.2.5",
+		Severity:    Advisory,
+	}
+	resp, err := r.Client.Do(ctx, http.MethodGet, "/Users/"+url.PathEscape(id)+"?attributes=userName", nil)
+	if err != nil {
+		res.Status = Error
+		res.Detail = err.Error()
+		return res
+	}
+	body, jsonErr := resp.JSON()
+	switch {
+	case resp.StatusCode != http.StatusOK:
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("expected 200, got %d", resp.StatusCode)
+	case jsonErr != nil:
+		res.Status = Fail
+		res.Detail = jsonErr.Error()
+	case body["userName"] == nil:
+		res.Status = Fail
+		res.Detail = "requested attribute userName missing from response"
+	case body["name"] != nil || body["emails"] != nil:
+		res.Status = Fail
+		res.Detail = "unrequested attributes (name/emails) present in response"
+	default:
+		res.Status = Pass
+	}
+	return res
+}
+
 // skippedLifecycle marks the dependent lifecycle checks as skipped when
 // the initial create failed, so reports stay complete and honest.
 func skippedLifecycle(reason string) []Result {
-	ids := []string{"user-get", "user-get-notfound", "user-filter-eq", "user-replace-put", "user-replace-readback", "user-patch-replace", "user-delete", "user-delete-verified"}
+	ids := []string{"user-get", "user-get-notfound", "user-filter-eq", "user-filter-nomatch", "user-list-all", "user-pagination-shape", "user-pagination-count-bound", "user-attributes-param", "user-replace-put", "user-replace-readback", "user-patch-replace", "user-delete", "user-delete-verified"}
 	out := make([]Result, 0, len(ids))
 	for _, id := range ids {
 		out = append(out, Result{ID: id, Severity: Required, Status: Skip, Detail: reason})

@@ -100,8 +100,24 @@ func (m *mockSCIM) listUsers(w http.ResponseWriter, r *http.Request) {
 			matches = append(matches, u)
 		}
 	}
+	total := len(matches)
+	startIndex := 1
+	if v := r.URL.Query().Get("startIndex"); v != "" {
+		fmt.Sscanf(v, "%d", &startIndex)
+	}
+	if startIndex > 1 && startIndex <= len(matches)+1 {
+		matches = matches[startIndex-1:]
+	}
+	if v := r.URL.Query().Get("count"); v != "" {
+		var count int
+		fmt.Sscanf(v, "%d", &count)
+		if count >= 0 && count < len(matches) {
+			matches = matches[:count]
+		}
+	}
 	writeSCIM(w, 200, map[string]any{
-		"schemas": []string{urnListResponse}, "totalResults": len(matches), "Resources": matches,
+		"schemas": []string{urnListResponse}, "totalResults": total,
+		"startIndex": startIndex, "itemsPerPage": len(matches), "Resources": matches,
 	})
 }
 
@@ -113,6 +129,12 @@ func (m *mockSCIM) userByID(w http.ResponseWriter, r *http.Request, id string) {
 	}
 	switch r.Method {
 	case http.MethodGet:
+		if r.URL.Query().Get("attributes") == "userName" {
+			writeSCIM(w, 200, map[string]any{
+				"schemas": user["schemas"], "id": user["id"], "userName": user["userName"],
+			})
+			return
+		}
 		writeSCIM(w, 200, user)
 	case http.MethodPut:
 		var replacement map[string]any
