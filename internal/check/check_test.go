@@ -135,7 +135,19 @@ func (m *mockSCIM) userByID(w http.ResponseWriter, r *http.Request, id string) {
 			return
 		}
 		for _, o := range op.Operations {
-			if strings.EqualFold(o.Op, "replace") {
+			if !strings.EqualFold(o.Op, "replace") {
+				continue
+			}
+			// Support one level of nesting ("name.givenName"), which is
+			// all the current checks use.
+			if parent, child, nested := strings.Cut(o.Path, "."); nested {
+				obj, ok := user[parent].(map[string]any)
+				if !ok {
+					obj = map[string]any{}
+					user[parent] = obj
+				}
+				obj[child] = o.Value
+			} else {
 				user[o.Path] = o.Value
 			}
 		}
@@ -205,6 +217,39 @@ func TestWrongCreateStatusIsDetected(t *testing.T) {
 	// Dependent checks must be skipped, not failed.
 	if res := byID(t, results, "user-delete"); res.Status != Skip {
 		t.Fatalf("expected dependent check to skip, got %s", res.Status)
+	}
+}
+
+func TestMinimalCreateRejectionFallsBackToEnrichedUser(t *testing.T) {
+	m := newMockSCIM()
+	m.overrides["POST /Users"] = func(w http.ResponseWriter, r *http.Request) {
+		var user map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+			scimError(w, 400)
+			return
+		}
+		// Mimic Keycloak's profile policy: reject users without a family name.
+		if _, ok := user["name"]; !ok {
+			scimError(w, 400)
+			return
+		}
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		m.nextID++
+		id := fmt.Sprintf("u%d", m.nextID)
+		user["id"] = id
+		m.users[id] = user
+		writeSCIM(w, 201, user)
+	}
+	results := runAll(t, m)
+	if res := byID(t, results, "user-create-minimal"); res.Status != Fail || res.Severity != Advisory {
+		t.Fatalf("expected advisory fail for minimal create, got %s/%s", res.Severity, res.Status)
+	}
+	if res := byID(t, results, "user-create"); res.Status != Pass {
+		t.Fatalf("expected enriched create to pass, got %s (%s)", res.Status, res.Detail)
+	}
+	if res := byID(t, results, "user-delete"); res.Status != Pass {
+		t.Fatalf("expected lifecycle to continue, got delete=%s (%s)", res.Status, res.Detail)
 	}
 }
 

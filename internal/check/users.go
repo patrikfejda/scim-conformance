@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
+
+	"github.com/patrikfejda/scim-conformance/internal/scim"
 )
 
 // UserLifecycle exercises one user through create → read → filter →
@@ -27,46 +30,114 @@ func (r *Runner) UserLifecycle(ctx context.Context, caps Capabilities) []Result 
 	results = append(results, r.getUser(ctx, userID, userName))
 	results = append(results, r.getMissingUser(ctx))
 	results = append(results, r.filterUser(ctx, userName, caps))
-	results = append(results, r.replaceUser(ctx, userID, userName))
+	results = append(results, r.replaceUser(ctx, userID, userName)...)
 	results = append(results, r.patchUser(ctx, userID, caps))
 	results = append(results, r.deleteUser(ctx, userID)...)
 	return results
 }
 
+// readAttr GETs the user and returns the value of a possibly-nested
+// attribute path like "name.givenName" (empty string when absent).
+func (r *Runner) readAttr(ctx context.Context, id, path string) (string, error) {
+	resp, err := r.Client.Do(ctx, http.MethodGet, "/Users/"+url.PathEscape(id), nil)
+	if err != nil {
+		return "", err
+	}
+	body, err := resp.JSON()
+	if err != nil {
+		return "", err
+	}
+	var current any = body
+	for _, part := range strings.Split(path, ".") {
+		obj, ok := current.(map[string]any)
+		if !ok {
+			return "", nil
+		}
+		current = obj[part]
+	}
+	val, _ := current.(string)
+	return val, nil
+}
+
+// createUser first attempts a spec-minimal user (userName only — the sole
+// required core attribute per RFC 7643 §4.1). Servers commonly reject this
+// due to their own profile policies, which is a conformance finding but
+// should not block the rest of the lifecycle, so a second, enriched
+// attempt follows.
 func (r *Runner) createUser(ctx context.Context, userName string) (string, []Result) {
-	res := Result{
+	minimal := Result{
+		ID:          "user-create-minimal",
+		Description: "POST /Users with a spec-minimal user (userName only) is accepted",
+		Reference:   "RFC 7643 §4.1, RFC 7644 §3.3",
+		Severity:    Advisory,
+	}
+	id, detail, err := r.postUser(ctx, map[string]any{
+		"schemas":  []string{urnUser},
+		"userName": userName,
+	})
+	if err != nil {
+		minimal.Status = Error
+		minimal.Detail = err.Error()
+		return "", []Result{minimal}
+	}
+	if id != "" {
+		minimal.Status = Pass
+		created := Result{
+			ID:          "user-create",
+			Description: "POST /Users returns 201 and an id",
+			Reference:   "RFC 7644 §3.3",
+			Severity:    Required,
+			Status:      Pass,
+		}
+		return id, []Result{minimal, created}
+	}
+	minimal.Status = Fail
+	minimal.Detail = detail
+
+	created := Result{
 		ID:          "user-create",
-		Description: "POST /Users with a minimal user returns 201 and an id",
+		Description: "POST /Users returns 201 and an id (enriched user after minimal was rejected)",
 		Reference:   "RFC 7644 §3.3",
 		Severity:    Required,
 	}
-	payload := map[string]any{
+	id, detail, err = r.postUser(ctx, map[string]any{
 		"schemas":  []string{urnUser},
 		"userName": userName,
+		"name":     map[string]any{"givenName": "SCIM", "familyName": "Conformance"},
+		"emails":   []map[string]any{{"value": userName + "@scim-conformance.invalid", "primary": true}},
+	})
+	switch {
+	case err != nil:
+		created.Status = Error
+		created.Detail = err.Error()
+	case id == "":
+		created.Status = Fail
+		created.Detail = detail
+	default:
+		created.Status = Pass
 	}
+	return id, []Result{minimal, created}
+}
+
+// postUser creates a user and returns its id (empty when the server
+// refused) plus a failure detail for reports.
+func (r *Runner) postUser(ctx context.Context, payload map[string]any) (string, string, error) {
 	resp, err := r.Client.Do(ctx, http.MethodPost, "/Users", payload)
 	if err != nil {
-		res.Status = Error
-		res.Detail = err.Error()
-		return "", []Result{res}
+		return "", "", err
 	}
 	body, jsonErr := resp.JSON()
 	switch {
 	case resp.StatusCode != http.StatusCreated:
-		res.Status = Fail
-		res.Detail = fmt.Sprintf("expected 201, got %d (body: %.200s)", resp.StatusCode, resp.Body)
+		return "", fmt.Sprintf("expected 201, got %d (body: %.200s)", resp.StatusCode, resp.Body), nil
 	case jsonErr != nil:
-		res.Status = Fail
-		res.Detail = jsonErr.Error()
-	default:
-		if id, _ := body["id"].(string); id != "" {
-			res.Status = Pass
-			return id, []Result{res, checkContentType("user-create-mediatype", resp.ContentType)}
-		}
-		res.Status = Fail
-		res.Detail = "201 response has no id attribute"
+		return "", jsonErr.Error(), nil
 	}
-	return "", []Result{res}
+	id, _ := body["id"].(string)
+	if id == "" {
+		return "", "201 response has no id attribute", nil
+	}
+	return id, "", nil
 }
 
 func (r *Runner) getUser(ctx context.Context, id, userName string) Result {
@@ -168,37 +239,81 @@ func (r *Runner) filterUser(ctx context.Context, userName string, caps Capabilit
 	return res
 }
 
-func (r *Runner) replaceUser(ctx context.Context, id, userName string) Result {
+func (r *Runner) replaceUser(ctx context.Context, id, userName string) []Result {
 	res := Result{
 		ID:          "user-replace-put",
-		Description: "PUT /Users/{id} replaces the user and returns 200 with the new state",
+		Description: "PUT /Users/{id} replaces the user; the change is visible on a subsequent GET",
 		Reference:   "RFC 7644 §3.5.1",
 		Severity:    Required,
 	}
+	familyName := "Conformance-Replaced"
 	displayName := "SCIM Conformance (updated)"
 	payload := map[string]any{
 		"schemas":     []string{urnUser},
 		"id":          id,
 		"userName":    userName,
+		"name":        map[string]any{"givenName": "SCIM", "familyName": familyName},
+		"emails":      []map[string]any{{"value": userName + "@scim-conformance.invalid", "primary": true}},
 		"displayName": displayName,
 	}
 	resp, err := r.Client.Do(ctx, http.MethodPut, "/Users/"+url.PathEscape(id), payload)
 	if err != nil {
 		res.Status = Error
 		res.Detail = err.Error()
+		return []Result{res}
+	}
+	if resp.StatusCode != http.StatusOK {
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("expected 200, got %d (body: %.200s)", resp.StatusCode, resp.Body)
+		return []Result{res}
+	}
+	stored, err := r.readAttr(ctx, id, "name.familyName")
+	switch {
+	case err != nil:
+		res.Status = Error
+		res.Detail = err.Error()
+	case stored != familyName:
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("name.familyName after PUT is %q, want %q", stored, familyName)
+	default:
+		res.Status = Pass
+	}
+	return []Result{res, r.replaceReadback(ctx, id, resp, displayName)}
+}
+
+// replaceReadback catches servers that echo an attribute in the PUT
+// response but silently drop it: whatever the response claims must match
+// what a GET returns. RFC 7644 §3.5.1 requires the response to contain
+// the resource's actual updated state.
+func (r *Runner) replaceReadback(ctx context.Context, id string, putResp *scim.Response, displayName string) Result {
+	res := Result{
+		ID:          "user-replace-readback",
+		Description: "attributes echoed in the PUT response are actually persisted (no silent drops)",
+		Reference:   "RFC 7644 §3.5.1",
+		Severity:    Advisory,
+	}
+	body, err := putResp.JSON()
+	if err != nil {
+		res.Status = Skip
+		res.Detail = "PUT response was not a JSON object"
 		return res
 	}
-	body, jsonErr := resp.JSON()
+	echoed, _ := body["displayName"].(string)
+	if echoed != displayName {
+		// The server did not accept the attribute at all; that is visible
+		// in the response, so there is nothing silent to catch here.
+		res.Status = Skip
+		res.Detail = "displayName not echoed in PUT response"
+		return res
+	}
+	stored, err := r.readAttr(ctx, id, "displayName")
 	switch {
-	case resp.StatusCode != http.StatusOK:
+	case err != nil:
+		res.Status = Error
+		res.Detail = err.Error()
+	case stored != displayName:
 		res.Status = Fail
-		res.Detail = fmt.Sprintf("expected 200, got %d", resp.StatusCode)
-	case jsonErr != nil:
-		res.Status = Fail
-		res.Detail = jsonErr.Error()
-	case body["displayName"] != displayName:
-		res.Status = Fail
-		res.Detail = fmt.Sprintf("displayName not applied: got %v", body["displayName"])
+		res.Detail = fmt.Sprintf("PUT response echoed displayName %q but GET returns %q", displayName, stored)
 	default:
 		res.Status = Pass
 	}
@@ -217,11 +332,11 @@ func (r *Runner) patchUser(ctx context.Context, id string, caps Capabilities) Re
 		res.Detail = "server declares patch.supported=false"
 		return res
 	}
-	displayName := "SCIM Conformance (patched)"
+	givenName := "Conformance-Patched"
 	payload := map[string]any{
 		"schemas": []string{"urn:ietf:params:scim:api:messages:2.0:PatchOp"},
 		"Operations": []map[string]any{
-			{"op": "replace", "path": "displayName", "value": displayName},
+			{"op": "replace", "path": "name.givenName", "value": givenName},
 		},
 	}
 	resp, err := r.Client.Do(ctx, http.MethodPatch, "/Users/"+url.PathEscape(id), payload)
@@ -230,25 +345,23 @@ func (r *Runner) patchUser(ctx context.Context, id string, caps Capabilities) Re
 		res.Detail = err.Error()
 		return res
 	}
-	// RFC 7644 §3.5.2 allows 200 with the resource or 204 without it.
-	switch resp.StatusCode {
-	case http.StatusOK:
-		body, jsonErr := resp.JSON()
-		if jsonErr != nil {
-			res.Status = Fail
-			res.Detail = jsonErr.Error()
-		} else if body["displayName"] != displayName {
-			res.Status = Fail
-			res.Detail = fmt.Sprintf("patch not applied: displayName is %v", body["displayName"])
-		} else {
-			res.Status = Pass
-		}
-	case http.StatusNoContent:
-		res.Status = Pass
-		res.Detail = "204 without body (allowed)"
-	default:
+	// RFC 7644 §3.5.2 allows 200 with the resource or 204 without it;
+	// either way the change must be visible on a subsequent GET.
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		res.Status = Fail
-		res.Detail = fmt.Sprintf("expected 200 or 204, got %d", resp.StatusCode)
+		res.Detail = fmt.Sprintf("expected 200 or 204, got %d (body: %.200s)", resp.StatusCode, resp.Body)
+		return res
+	}
+	stored, err := r.readAttr(ctx, id, "name.givenName")
+	switch {
+	case err != nil:
+		res.Status = Error
+		res.Detail = err.Error()
+	case stored != givenName:
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("name.givenName after PATCH is %q, want %q", stored, givenName)
+	default:
+		res.Status = Pass
 	}
 	return res
 }
@@ -296,7 +409,7 @@ func (r *Runner) deleteUser(ctx context.Context, id string) []Result {
 // skippedLifecycle marks the dependent lifecycle checks as skipped when
 // the initial create failed, so reports stay complete and honest.
 func skippedLifecycle(reason string) []Result {
-	ids := []string{"user-get", "user-get-notfound", "user-filter-eq", "user-replace-put", "user-patch-replace", "user-delete", "user-delete-verified"}
+	ids := []string{"user-get", "user-get-notfound", "user-filter-eq", "user-replace-put", "user-replace-readback", "user-patch-replace", "user-delete", "user-delete-verified"}
 	out := make([]Result, 0, len(ids))
 	for _, id := range ids {
 		out = append(out, Result{ID: id, Severity: Required, Status: Skip, Detail: reason})

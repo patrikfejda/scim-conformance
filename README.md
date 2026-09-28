@@ -28,6 +28,14 @@ Exit code is non-zero when a **required** check fails, so it drops straight into
 
 Run `go test ./...` — every check is tested against a compliant in-memory SCIM server plus broken variants proving the check detects its target violation.
 
+## First results
+
+| Implementation | Result | Findings |
+|---|---|---|
+| Keycloak 26.7.4 native SCIM (preview) | 13 pass, 2 advisory findings | [/Schemas contradicts enforced user-profile requirements + wrong `scimType`; `displayName` echoed in write responses but silently dropped](docs/findings/keycloak-26.7.4.md) |
+
+Both findings were verified manually beyond the runner before writing them up; upstream reports are being prepared.
+
 ## Roadmap
 
 - More RFC 7644 coverage: PATCH on multi-valued attributes, filter grammar corners, `excludedAttributes`, pagination
