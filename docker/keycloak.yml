@@ -1,0 +1,12 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7
+    command: ["start-dev"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Verify the exact SCIM feature-flag name for your Keycloak version
+      # (experimental in 26.6, preview in 26.7): kc.sh start-dev --features=...
+      KC_FEATURES: scim
+    ports:
+      - "8080:8080"

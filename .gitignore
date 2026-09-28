@@ -1,0 +1,3 @@
+/scim-conformance
+*.test
+dist/
