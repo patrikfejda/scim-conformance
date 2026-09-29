@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCIM 2.0 interop matrix</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 72rem; padding: 0 1rem; color: #222; }
+  h1 { font-size: 1.5rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  th, td { border: 1px solid #ccc; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f2f2f2; }
+  .cell { text-align: center; font-weight: 600; }
+  .pass { background: #d8f0d8; }
+  .fail { background: #f6d6d6; }
+  .skip { background: #eee; color: #666; }
+  .error { background: #f3e2c0; }
+  .none { background: #fafafa; color: #aaa; }
+  .sev { color: #666; font-size: 0.75rem; }
+  .ref { color: #666; white-space: nowrap; }
+  footer { margin-top: 1.5rem; color: #666; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<h1>SCIM 2.0 interop matrix</h1>
+<p>Results of <a href="https://github.com/patrikfejda/scim-conformance">scim-conformance</a> runs
+against open-source SCIM implementations. <strong>pass</strong>/<strong>fail</strong> per check;
+advisory checks record real-world deviations without failing a run. Failure details are shown
+in the cell title (hover). Findings write-ups live in
+<a href="https://github.com/patrikfejda/scim-conformance/tree/main/docs/findings">docs/findings</a>.</p>
+<table>
+<thead><tr><th>Check</th><th>Reference</th><th>Keycloak 26.7.4 (native SCIM preview)</th><th>scim2-server 0.3.0 (Yaal Coop)</th><th>scimgateway 6.2.10 (plugin-loki)</th></tr></thead>
+<tbody>
+<tr>
+<td><code>discovery-spconfig</code><br>GET /ServiceProviderConfig returns 200 with the ServiceProviderConfig schema <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §4, RFC 7643 §5</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>discovery-spconfig-mediatype</code><br>response Content-Type is application/scim&#43;json <span class="sev">(advisory)</span></td>
+<td class="ref">RFC 7644 §3.1</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>discovery-spconfig-capabilities</code><br>ServiceProviderConfig declares patch, filter, bulk, sort, changePassword and etag capabilities <span class="sev">(required)</span></td>
+<td class="ref">RFC 7643 §5</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>discovery-schemas</code><br>GET /Schemas returns 200 and includes the core User schema <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §4</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>discovery-resourcetypes</code><br>GET /ResourceTypes returns 200 and includes a User resource type <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §4</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-create-minimal</code><br>POST /Users with a spec-minimal user (userName only) is accepted <span class="sev">(advisory)</span></td>
+<td class="ref">RFC 7643 §4.1, RFC 7644 §3.3</td>
+<td class="cell fail" title="expected 201, got 400 (body: {&#34;schemas&#34;:[&#34;urn:ietf:params:scim:api:messages:2.0:Error&#34;],&#34;status&#34;:&#34;400&#34;,&#34;scimType&#34;:&#34;invalidSyntax&#34;,&#34;detail&#34;:&#34;Please specify lastName.&#34;})">fail</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-create</code><br>POST /Users returns 201 and an id (enriched user after minimal was rejected) <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.3</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-get</code><br>GET /Users/{id} returns the created user with matching userName <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.4.1</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-get-notfound</code><br>GET on a nonexistent user returns 404 with a SCIM error body <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.12</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-filter-eq</code><br>GET /Users?filter=userName eq &#34;...&#34; returns a ListResponse containing the user <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.4.2.2</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-filter-caseinsensitive</code><br>a filter using lowercase attribute name (username eq &#34;...&#34;) matches like userName <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.4.2.2</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell fail" title="expected totalResults 1, got 0">fail</td>
+</tr>
+<tr>
+<td><code>user-filter-nomatch</code><br>a filter matching no users returns 200 with an empty ListResponse (totalResults 0) <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.4.2.2</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-list-all</code><br>GET /Users without parameters returns a ListResponse with totalResults and Resources <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.4.2</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-pagination-shape</code><br>a paged request (startIndex=1&amp;count=1) returns startIndex and itemsPerPage <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.4.2.4</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-pagination-count-bound</code><br>a paged request returns no more resources than count <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.4.2.4</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-attributes-param</code><br>GET /Users/{id}?attributes=userName returns userName and omits unrequested attributes <span class="sev">(advisory)</span></td>
+<td class="ref">RFC 7644 §3.4.2.5</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-replace-put</code><br>PUT /Users/{id} replaces the user; the change is visible on a subsequent GET <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.5.1</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-replace-readback</code><br>attributes echoed in the PUT response are actually persisted (no silent drops) <span class="sev">(advisory)</span></td>
+<td class="ref">RFC 7644 §3.5.1</td>
+<td class="cell fail" title="PUT response echoed displayName &#34;SCIM Conformance (updated)&#34; but GET returns &#34;&#34;">fail</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-patch-replace</code><br>PATCH /Users/{id} with a replace op is applied (or the server declares PATCH unsupported) <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.5.2</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-patch-add-multivalued</code><br>PATCH add on &#34;emails&#34; appends a value (verified via GET) <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.5.2.1</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-patch-valuepath</code><br>PATCH replace via value filter path (emails[type eq &#34;work&#34;].value) is applied (verified via GET) <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.5.2</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-delete</code><br>DELETE /Users/{id} returns 204 <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.6</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>user-delete-verified</code><br>GET after DELETE returns 404 <span class="sev">(required)</span></td>
+<td class="ref">RFC 7644 §3.6</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+</tbody>
+</table>
+<footer>Generated by <code>matrix-gen</code> from JSON reports in
+<a href="https://github.com/patrikfejda/scim-conformance/tree/main/docs/matrix">docs/matrix</a>.
+Results are point-in-time observations of specific versions, filed upstream before publication.</footer>
+</body>
+</html>

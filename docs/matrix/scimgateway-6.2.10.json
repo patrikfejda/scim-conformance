@@ -1,0 +1,172 @@
+{
+  "target": "http://localhost:8880",
+  "results": [
+    {
+      "id": "discovery-spconfig",
+      "description": "GET /ServiceProviderConfig returns 200 with the ServiceProviderConfig schema",
+      "reference": "RFC 7644 §4, RFC 7643 §5",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "discovery-spconfig-mediatype",
+      "description": "response Content-Type is application/scim+json",
+      "reference": "RFC 7644 §3.1",
+      "severity": "advisory",
+      "status": "pass"
+    },
+    {
+      "id": "discovery-spconfig-capabilities",
+      "description": "ServiceProviderConfig declares patch, filter, bulk, sort, changePassword and etag capabilities",
+      "reference": "RFC 7643 §5",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "discovery-schemas",
+      "description": "GET /Schemas returns 200 and includes the core User schema",
+      "reference": "RFC 7644 §4",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "discovery-resourcetypes",
+      "description": "GET /ResourceTypes returns 200 and includes a User resource type",
+      "reference": "RFC 7644 §4",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-create-minimal",
+      "description": "POST /Users with a spec-minimal user (userName only) is accepted",
+      "reference": "RFC 7643 §4.1, RFC 7644 §3.3",
+      "severity": "advisory",
+      "status": "pass"
+    },
+    {
+      "id": "user-create",
+      "description": "POST /Users returns 201 and an id",
+      "reference": "RFC 7644 §3.3",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-get",
+      "description": "GET /Users/{id} returns the created user with matching userName",
+      "reference": "RFC 7644 §3.4.1",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-get-notfound",
+      "description": "GET on a nonexistent user returns 404 with a SCIM error body",
+      "reference": "RFC 7644 §3.12",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-filter-eq",
+      "description": "GET /Users?filter=userName eq \"...\" returns a ListResponse containing the user",
+      "reference": "RFC 7644 §3.4.2.2",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-filter-caseinsensitive",
+      "description": "a filter using lowercase attribute name (username eq \"...\") matches like userName",
+      "reference": "RFC 7644 §3.4.2.2",
+      "severity": "required",
+      "status": "fail",
+      "detail": "expected totalResults 1, got 0"
+    },
+    {
+      "id": "user-filter-nomatch",
+      "description": "a filter matching no users returns 200 with an empty ListResponse (totalResults 0)",
+      "reference": "RFC 7644 §3.4.2.2",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-list-all",
+      "description": "GET /Users without parameters returns a ListResponse with totalResults and Resources",
+      "reference": "RFC 7644 §3.4.2",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-pagination-shape",
+      "description": "a paged request (startIndex=1\u0026count=1) returns startIndex and itemsPerPage",
+      "reference": "RFC 7644 §3.4.2.4",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-pagination-count-bound",
+      "description": "a paged request returns no more resources than count",
+      "reference": "RFC 7644 §3.4.2.4",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-attributes-param",
+      "description": "GET /Users/{id}?attributes=userName returns userName and omits unrequested attributes",
+      "reference": "RFC 7644 §3.4.2.5",
+      "severity": "advisory",
+      "status": "pass"
+    },
+    {
+      "id": "user-replace-put",
+      "description": "PUT /Users/{id} replaces the user; the change is visible on a subsequent GET",
+      "reference": "RFC 7644 §3.5.1",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-replace-readback",
+      "description": "attributes echoed in the PUT response are actually persisted (no silent drops)",
+      "reference": "RFC 7644 §3.5.1",
+      "severity": "advisory",
+      "status": "pass"
+    },
+    {
+      "id": "user-patch-replace",
+      "description": "PATCH /Users/{id} with a replace op is applied (or the server declares PATCH unsupported)",
+      "reference": "RFC 7644 §3.5.2",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-patch-add-multivalued",
+      "description": "PATCH add on \"emails\" appends a value (verified via GET)",
+      "reference": "RFC 7644 §3.5.2.1",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-patch-valuepath",
+      "description": "PATCH replace via value filter path (emails[type eq \"work\"].value) is applied (verified via GET)",
+      "reference": "RFC 7644 §3.5.2",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-delete",
+      "description": "DELETE /Users/{id} returns 204",
+      "reference": "RFC 7644 §3.6",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "user-delete-verified",
+      "description": "GET after DELETE returns 404",
+      "reference": "RFC 7644 §3.6",
+      "severity": "required",
+      "status": "pass"
+    }
+  ],
+  "passed": 22,
+  "failed": 1,
+  "skipped": 0,
+  "errored": 0,
+  "requiredFailures": 1
+}
