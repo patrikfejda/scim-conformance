@@ -30,12 +30,14 @@ func (r *Runner) UserLifecycle(ctx context.Context, caps Capabilities) []Result 
 	results = append(results, r.getUser(ctx, userID, userName))
 	results = append(results, r.getMissingUser(ctx))
 	results = append(results, r.filterUser(ctx, userName, caps))
+	results = append(results, r.filterCaseInsensitive(ctx, userName, caps))
 	results = append(results, r.filterNoMatch(ctx, caps))
 	results = append(results, r.listAll(ctx))
 	results = append(results, r.pagination(ctx)...)
 	results = append(results, r.attributesParam(ctx, userID))
 	results = append(results, r.replaceUser(ctx, userID, userName)...)
 	results = append(results, r.patchUser(ctx, userID, caps))
+	results = append(results, r.patchMultiValued(ctx, userID, caps)...)
 	results = append(results, r.deleteUser(ctx, userID)...)
 	return results
 }
@@ -410,6 +412,149 @@ func (r *Runner) deleteUser(ctx context.Context, id string) []Result {
 	return []Result{del, gone}
 }
 
+// filterCaseInsensitive encodes RFC 7644 §3.4.2.2: "Attribute names and
+// attribute operators used in filters are case insensitive." Filtering on
+// "username" must behave exactly like "userName".
+func (r *Runner) filterCaseInsensitive(ctx context.Context, userName string, caps Capabilities) Result {
+	res := Result{
+		ID:          "user-filter-caseinsensitive",
+		Description: `a filter using lowercase attribute name (username eq "...") matches like userName`,
+		Reference:   "RFC 7644 §3.4.2.2",
+		Severity:    Required,
+	}
+	if !caps.FilterSupported {
+		res.Status = Skip
+		res.Detail = "server declares filter.supported=false"
+		return res
+	}
+	query := url.QueryEscape(fmt.Sprintf("username eq %q", userName))
+	resp, err := r.Client.Do(ctx, http.MethodGet, "/Users?filter="+query, nil)
+	if err != nil {
+		res.Status = Error
+		res.Detail = err.Error()
+		return res
+	}
+	body, jsonErr := resp.JSON()
+	switch {
+	case resp.StatusCode != http.StatusOK:
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("expected 200, got %d (body: %.200s)", resp.StatusCode, resp.Body)
+	case jsonErr != nil:
+		res.Status = Fail
+		res.Detail = jsonErr.Error()
+	case numberAt(body, "totalResults") != 1:
+		res.Status = Fail
+		res.Detail = fmt.Sprintf("expected totalResults 1, got %v", body["totalResults"])
+	default:
+		res.Status = Pass
+	}
+	return res
+}
+
+// patchMultiValued exercises PATCH on multi-valued attributes — the area
+// where implementations diverge most: an "add" on emails, then a
+// "replace" addressed via a value filter path (emails[type eq "work"].value,
+// RFC 7644 §3.5.2 valuePath grammar). Both verified via GET.
+func (r *Runner) patchMultiValued(ctx context.Context, id string, caps Capabilities) []Result {
+	add := Result{
+		ID:          "user-patch-add-multivalued",
+		Description: `PATCH add on "emails" appends a value (verified via GET)`,
+		Reference:   "RFC 7644 §3.5.2.1",
+		Severity:    Required,
+	}
+	valuePath := Result{
+		ID:          "user-patch-valuepath",
+		Description: `PATCH replace via value filter path (emails[type eq "work"].value) is applied (verified via GET)`,
+		Reference:   "RFC 7644 §3.5.2",
+		Severity:    Required,
+	}
+	if !caps.PatchSupported {
+		add.Status, add.Detail = Skip, "server declares patch.supported=false"
+		valuePath.Status, valuePath.Detail = Skip, add.Detail
+		return []Result{add, valuePath}
+	}
+
+	workEmail := "work-" + r.UserNameSuffix + "@scim-conformance.invalid"
+	addPayload := map[string]any{
+		"schemas": []string{"urn:ietf:params:scim:api:messages:2.0:PatchOp"},
+		"Operations": []map[string]any{
+			{"op": "add", "path": "emails", "value": []map[string]any{{"value": workEmail, "type": "work"}}},
+		},
+	}
+	resp, err := r.Client.Do(ctx, http.MethodPatch, "/Users/"+url.PathEscape(id), addPayload)
+	switch {
+	case err != nil:
+		add.Status, add.Detail = Error, err.Error()
+	case resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent:
+		add.Status = Fail
+		add.Detail = fmt.Sprintf("expected 200 or 204, got %d (body: %.200s)", resp.StatusCode, resp.Body)
+	default:
+		found, ferr := r.userHasEmail(ctx, id, workEmail)
+		switch {
+		case ferr != nil:
+			add.Status, add.Detail = Error, ferr.Error()
+		case !found:
+			add.Status = Fail
+			add.Detail = fmt.Sprintf("added email %q not present on GET", workEmail)
+		default:
+			add.Status = Pass
+		}
+	}
+	if add.Status != Pass {
+		valuePath.Status = Skip
+		valuePath.Detail = "depends on the added work email"
+		return []Result{add, valuePath}
+	}
+
+	replacedEmail := "replaced-" + r.UserNameSuffix + "@scim-conformance.invalid"
+	vpPayload := map[string]any{
+		"schemas": []string{"urn:ietf:params:scim:api:messages:2.0:PatchOp"},
+		"Operations": []map[string]any{
+			{"op": "replace", "path": `emails[type eq "work"].value`, "value": replacedEmail},
+		},
+	}
+	resp, err = r.Client.Do(ctx, http.MethodPatch, "/Users/"+url.PathEscape(id), vpPayload)
+	switch {
+	case err != nil:
+		valuePath.Status, valuePath.Detail = Error, err.Error()
+	case resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent:
+		valuePath.Status = Fail
+		valuePath.Detail = fmt.Sprintf("expected 200 or 204, got %d (body: %.200s)", resp.StatusCode, resp.Body)
+	default:
+		found, ferr := r.userHasEmail(ctx, id, replacedEmail)
+		switch {
+		case ferr != nil:
+			valuePath.Status, valuePath.Detail = Error, ferr.Error()
+		case !found:
+			valuePath.Status = Fail
+			valuePath.Detail = fmt.Sprintf("value-path replaced email %q not present on GET", replacedEmail)
+		default:
+			valuePath.Status = Pass
+		}
+	}
+	return []Result{add, valuePath}
+}
+
+// userHasEmail GETs the user and reports whether any emails[].value
+// equals wanted.
+func (r *Runner) userHasEmail(ctx context.Context, id, wanted string) (bool, error) {
+	resp, err := r.Client.Do(ctx, http.MethodGet, "/Users/"+url.PathEscape(id), nil)
+	if err != nil {
+		return false, err
+	}
+	body, err := resp.JSON()
+	if err != nil {
+		return false, err
+	}
+	emails, _ := body["emails"].([]any)
+	for _, e := range emails {
+		if obj, ok := e.(map[string]any); ok && obj["value"] == wanted {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // filterNoMatch encodes a common real-world bug: a filter matching
 // nothing must yield an empty ListResponse, not an error or 404.
 func (r *Runner) filterNoMatch(ctx context.Context, caps Capabilities) Result {
@@ -575,7 +720,7 @@ func (r *Runner) attributesParam(ctx context.Context, id string) Result {
 // skippedLifecycle marks the dependent lifecycle checks as skipped when
 // the initial create failed, so reports stay complete and honest.
 func skippedLifecycle(reason string) []Result {
-	ids := []string{"user-get", "user-get-notfound", "user-filter-eq", "user-filter-nomatch", "user-list-all", "user-pagination-shape", "user-pagination-count-bound", "user-attributes-param", "user-replace-put", "user-replace-readback", "user-patch-replace", "user-delete", "user-delete-verified"}
+	ids := []string{"user-get", "user-get-notfound", "user-filter-eq", "user-filter-caseinsensitive", "user-filter-nomatch", "user-list-all", "user-pagination-shape", "user-pagination-count-bound", "user-attributes-param", "user-replace-put", "user-replace-readback", "user-patch-replace", "user-patch-add-multivalued", "user-patch-valuepath", "user-delete", "user-delete-verified"}
 	out := make([]Result, 0, len(ids))
 	for _, id := range ids {
 		out = append(out, Result{ID: id, Severity: Required, Status: Skip, Detail: reason})

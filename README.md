@@ -24,7 +24,7 @@ Exit code is non-zero when a **required** check fails, so it drops straight into
 | Group | Checks |
 |---|---|
 | Discovery (RFC 7644 §4) | ServiceProviderConfig presence + schema, mandatory capability declarations, media type, /Schemas, /ResourceTypes |
-| User lifecycle (RFC 7644 §3) | spec-minimal create (advisory) with enriched fallback, create (201 + id), read, 404 error shape (§3.12), filter `eq` and no-match filter as ListResponse, list-all shape, pagination (`startIndex`/`itemsPerPage` presence, `count` bound, §3.4.2.4), `attributes` selection (§3.4.2.5, advisory), PUT replace verified via GET, write-echo persistence (advisory), PATCH replace verified via GET (skipped when `patch.supported=false`), delete + delete verification |
+| User lifecycle (RFC 7644 §3) | spec-minimal create (advisory) with enriched fallback, create (201 + id), read, 404 error shape (§3.12), filter `eq`, case-insensitive filter attribute names (§3.4.2.2), no-match filter as empty ListResponse, list-all shape, pagination (`startIndex`/`itemsPerPage` presence, `count` bound, §3.4.2.4), `attributes` selection (§3.4.2.5, advisory), PUT replace verified via GET, write-echo persistence (advisory), PATCH replace verified via GET, PATCH add on multi-valued `emails` (§3.5.2.1), PATCH replace via value filter path `emails[type eq "work"].value` (§3.5.2), delete + delete verification |
 
 Writes are never trusted from their responses alone: PUT and PATCH results are verified with a follow-up GET, which is how the suite catches attributes that are echoed back but silently dropped.
 
@@ -34,8 +34,9 @@ Run `go test ./...` — every check is tested against a compliant in-memory SCIM
 
 | Implementation | Result | Findings |
 |---|---|---|
-| Keycloak 26.7.4 native SCIM (preview) | 18/20 pass, 2 advisory findings | [/Schemas contradicts enforced user-profile requirements + wrong `scimType`; `displayName` echoed in write responses but silently dropped](docs/findings/keycloak-26.7.4.md) |
-| scim2-server 0.3.0 (Yaal Coop) | 20/20 pass | clean run — no deviations observed in the current check set |
+| Keycloak 26.7.4 native SCIM (preview) | 21/23 pass, 2 advisory findings | [/Schemas contradicts enforced user-profile requirements + wrong `scimType`; `displayName` echoed in write responses but silently dropped](docs/findings/keycloak-26.7.4.md) |
+| scim2-server 0.3.0 (Yaal Coop) | 23/23 pass | clean run — no deviations observed in the current check set |
+| scimgateway 6.2.10 (plugin-loki) | 22/23 pass, 1 finding | [attribute names in filters are case-sensitive; lowercase `username` silently returns an empty result](docs/findings/scimgateway-6.2.10.md) |
 
 All findings are verified manually beyond the runner before being written up; upstream reports are being prepared.
 

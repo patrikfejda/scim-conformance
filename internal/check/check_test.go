@@ -157,20 +157,33 @@ func (m *mockSCIM) userByID(w http.ResponseWriter, r *http.Request, id string) {
 			return
 		}
 		for _, o := range op.Operations {
-			if !strings.EqualFold(o.Op, "replace") {
-				continue
-			}
-			// Support one level of nesting ("name.givenName"), which is
-			// all the current checks use.
-			if parent, child, nested := strings.Cut(o.Path, "."); nested {
-				obj, ok := user[parent].(map[string]any)
-				if !ok {
-					obj = map[string]any{}
-					user[parent] = obj
+			switch {
+			case strings.EqualFold(o.Op, "add") && o.Path == "emails":
+				vals, _ := o.Value.([]any)
+				existing, _ := user["emails"].([]any)
+				user["emails"] = append(existing, vals...)
+			case strings.EqualFold(o.Op, "replace") && strings.HasPrefix(o.Path, "emails[type eq "):
+				// e.g. emails[type eq "work"].value
+				typ := strings.Trim(strings.TrimSuffix(strings.TrimPrefix(o.Path, `emails[type eq `), `].value`), `"`)
+				emails, _ := user["emails"].([]any)
+				for _, e := range emails {
+					if m, ok := e.(map[string]any); ok && m["type"] == typ {
+						m["value"] = o.Value
+					}
 				}
-				obj[child] = o.Value
-			} else {
-				user[o.Path] = o.Value
+			case strings.EqualFold(o.Op, "replace"):
+				// Support one level of nesting ("name.givenName"), which
+				// is all the current checks use.
+				if parent, child, nested := strings.Cut(o.Path, "."); nested {
+					obj, ok := user[parent].(map[string]any)
+					if !ok {
+						obj = map[string]any{}
+						user[parent] = obj
+					}
+					obj[child] = o.Value
+				} else {
+					user[o.Path] = o.Value
+				}
 			}
 		}
 		writeSCIM(w, 200, user)
