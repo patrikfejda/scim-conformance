@@ -32,6 +32,13 @@ Run `go test ./...` — every check is tested against a compliant in-memory SCIM
 
 ## First results
 
+**Live interop matrix: https://patrikfejda.github.io/scim-conformance/matrix/** — rendered by `matrix-gen` from the JSON reports in [docs/matrix](docs/matrix). Regenerate with:
+
+```
+scim-conformance --base-url ... --json > docs/matrix/<impl>.json
+go run ./cmd/matrix-gen -o docs/matrix/index.html "Name=docs/matrix/<impl>.json" ...
+```
+
 | Implementation | Result | Findings |
 |---|---|---|
 | Keycloak 26.7.4 native SCIM (preview) | 21/23 pass, 2 advisory findings | [/Schemas contradicts enforced user-profile requirements + wrong `scimType`; `displayName` echoed in write responses but silently dropped](docs/findings/keycloak-26.7.4.md) |
