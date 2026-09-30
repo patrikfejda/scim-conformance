@@ -1,5 +1,5 @@
 {
-  "target": "http://localhost:9090/v2",
+  "target": "http://localhost:8082",
   "results": [
     {
       "id": "discovery-spconfig",
@@ -13,7 +13,8 @@
       "description": "response Content-Type is application/scim+json",
       "reference": "RFC 7644 §3.1",
       "severity": "advisory",
-      "status": "pass"
+      "status": "fail",
+      "detail": "got \"\""
     },
     {
       "id": "discovery-spconfig-capabilities",
@@ -27,7 +28,8 @@
       "description": "ServiceProviderConfig declares the etag capability",
       "reference": "RFC 7643 §5",
       "severity": "advisory",
-      "status": "pass"
+      "status": "fail",
+      "detail": "etag capability not declared"
     },
     {
       "id": "discovery-schemas",
@@ -146,14 +148,16 @@
       "description": "PATCH add on \"emails\" appends a value (verified via GET)",
       "reference": "RFC 7644 §3.5.2.1",
       "severity": "required",
-      "status": "pass"
+      "status": "fail",
+      "detail": "expected 200 or 204, got 500 (body: \u003c!doctype html\u003e\n\u003chtml lang=\"en\"\u003e\n\u003chead\u003e\n    \u003ctitle\u003eInternal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-6\u003c/title\u003e\n    \u003cmeta charset=\"utf-8\"\u003e\n    \u003cstyle\u003ehtml, body {\n    margin: 0;\n   )"
     },
     {
       "id": "user-patch-valuepath",
       "description": "PATCH replace via value filter path (emails[type eq \"work\"].value) is applied (verified via GET)",
       "reference": "RFC 7644 §3.5.2",
       "severity": "required",
-      "status": "pass"
+      "status": "skip",
+      "detail": "depends on the added work email"
     },
     {
       "id": "user-delete",
@@ -188,7 +192,8 @@
       "description": "PATCH add on members adds a user to the group (verified via GET)",
       "reference": "RFC 7644 §3.5.2.1, RFC 7643 §4.2",
       "severity": "required",
-      "status": "pass"
+      "status": "fail",
+      "detail": "expected 200 or 204, got 500 (body: \u003c!doctype html\u003e\n\u003chtml lang=\"en\"\u003e\n\u003chead\u003e\n    \u003ctitle\u003eInternal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-7\u003c/title\u003e\n    \u003cmeta charset=\"utf-8\"\u003e\n    \u003cstyle\u003ehtml, body {\n    margin: 0;\n   )"
     },
     {
       "id": "group-delete",
@@ -198,9 +203,9 @@
       "status": "pass"
     }
   ],
-  "passed": 28,
-  "failed": 0,
-  "skipped": 0,
+  "passed": 23,
+  "failed": 4,
+  "skipped": 1,
   "errored": 0,
-  "requiredFailures": 0
+  "requiredFailures": 2
 }

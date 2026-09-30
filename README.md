@@ -23,7 +23,7 @@ Exit code is non-zero when a **required** check fails, so it drops straight into
 
 | Group | Checks |
 |---|---|
-| Discovery (RFC 7644 §4) | ServiceProviderConfig presence + schema, mandatory capability declarations, media type, /Schemas, /ResourceTypes |
+| Discovery (RFC 7644 §4) | ServiceProviderConfig presence + schema, core capability declarations (required) + etag (advisory), media type, /Schemas, /ResourceTypes |
 | User lifecycle (RFC 7644 §3) | spec-minimal create (advisory) with enriched fallback, create (201 + id), read, 404 error shape (§3.12), filter `eq`, case-insensitive filter attribute names (§3.4.2.2), no-match filter as empty ListResponse, list-all shape, pagination (`startIndex`/`itemsPerPage` presence, `count` bound, §3.4.2.4), `attributes` selection (§3.4.2.5, advisory), PUT replace verified via GET, write-echo persistence (advisory), PATCH replace verified via GET, PATCH add on multi-valued `emails` (§3.5.2.1), PATCH replace via value filter path `emails[type eq "work"].value` (§3.5.2), delete + delete verification |
 
 | Group lifecycle (RFC 7643 §4.2) | create, read, PATCH add member (verified via GET — catches silently ignored membership changes), delete |
@@ -45,7 +45,8 @@ go run ./cmd/matrix-gen -o docs/matrix/index.html "Name=docs/matrix/<impl>.json"
 |---|---|---|
 | Keycloak 26.7.4 native SCIM (preview) | 25/27 pass, 2 advisory findings | [/Schemas contradicts enforced user-profile requirements + wrong `scimType`; `displayName` echoed in write responses but silently dropped](docs/findings/keycloak-26.7.4.md) (one earlier candidate was a runner false-positive, [retracted](docs/findings/keycloak-26.7.4.md)) |
 | scim2-server 0.3.0 (Yaal Coop) | 27/27 pass | clean run — no deviations observed in the current check set |
-| scimgateway 6.2.10 (plugin-loki) | 26/27 pass, 1 finding | [attribute names in filters are case-sensitive; lowercase `username` silently returns an empty result](docs/findings/scimgateway-6.2.10.md) |
+| scimgateway 6.2.10 (plugin-loki) | 27/28 pass, 1 finding | [attribute names in filters are case-sensitive; lowercase `username` silently returns an empty result](docs/findings/scimgateway-6.2.10.md) |
+| i2scim 0.10.4 (in-memory) | 23/28 pass, 1 finding + 2 advisory | [PATCH `add` to a multi-valued attribute (emails / group members) crashes with HTTP 500 `ClassCastException` in MemoryProvider](docs/findings/i2scim-0.10.4.md) |
 
 All findings are verified manually beyond the runner before being written up; upstream reports are being prepared.
 

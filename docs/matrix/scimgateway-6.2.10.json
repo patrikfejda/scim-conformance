@@ -17,9 +17,16 @@
     },
     {
       "id": "discovery-spconfig-capabilities",
-      "description": "ServiceProviderConfig declares patch, filter, bulk, sort, changePassword and etag capabilities",
+      "description": "ServiceProviderConfig declares patch, filter, bulk, sort and changePassword capabilities",
       "reference": "RFC 7643 §5",
       "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "discovery-spconfig-etag",
+      "description": "ServiceProviderConfig declares the etag capability",
+      "reference": "RFC 7643 §5",
+      "severity": "advisory",
       "status": "pass"
     },
     {
@@ -192,7 +199,7 @@
       "status": "pass"
     }
   ],
-  "passed": 26,
+  "passed": 27,
   "failed": 1,
   "skipped": 0,
   "errored": 0,

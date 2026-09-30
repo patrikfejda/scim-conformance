@@ -60,39 +60,54 @@ func (r *Runner) Discovery(ctx context.Context) ([]Result, Capabilities) {
 	results = append(results, spc)
 
 	results = append(results, checkContentType("discovery-spconfig-mediatype", resp.ContentType))
-	results = append(results, r.capabilityDeclarations(body, jsonErr == nil && resp.StatusCode == http.StatusOK))
+	results = append(results, r.capabilityDeclarations(body, jsonErr == nil && resp.StatusCode == http.StatusOK)...)
 	results = append(results, r.schemasEndpoint(ctx))
 	results = append(results, r.resourceTypesEndpoint(ctx))
 	return results, caps
 }
 
-// capabilityDeclarations verifies the mandatory capability sub-attributes
-// are present at all (RFC 7643 §5 makes them required).
-func (r *Runner) capabilityDeclarations(body map[string]any, parseable bool) Result {
-	res := Result{
+// capabilityDeclarations verifies the core capability sub-attributes are
+// present. etag is checked separately as advisory: RFC 7643 §5 lists it,
+// but it is commonly (and forgivably) omitted — even a SCIM RFC author's
+// reference server (i2scim) leaves it out, so a hard failure would cry
+// wolf.
+func (r *Runner) capabilityDeclarations(body map[string]any, parseable bool) []Result {
+	core := Result{
 		ID:          "discovery-spconfig-capabilities",
-		Description: "ServiceProviderConfig declares patch, filter, bulk, sort, changePassword and etag capabilities",
+		Description: "ServiceProviderConfig declares patch, filter, bulk, sort and changePassword capabilities",
 		Reference:   "RFC 7643 §5",
 		Severity:    Required,
 	}
+	etag := Result{
+		ID:          "discovery-spconfig-etag",
+		Description: "ServiceProviderConfig declares the etag capability",
+		Reference:   "RFC 7643 §5",
+		Severity:    Advisory,
+	}
 	if !parseable {
-		res.Status = Skip
-		res.Detail = "ServiceProviderConfig response was not usable"
-		return res
+		core.Status, core.Detail = Skip, "ServiceProviderConfig response was not usable"
+		etag.Status, etag.Detail = Skip, core.Detail
+		return []Result{core, etag}
 	}
 	var missing []string
-	for _, attr := range []string{"patch", "filter", "bulk", "sort", "changePassword", "etag"} {
+	for _, attr := range []string{"patch", "filter", "bulk", "sort", "changePassword"} {
 		if _, ok := body[attr].(map[string]any); !ok {
 			missing = append(missing, attr)
 		}
 	}
 	if len(missing) > 0 {
-		res.Status = Fail
-		res.Detail = "missing capability attributes: " + strings.Join(missing, ", ")
-		return res
+		core.Status = Fail
+		core.Detail = "missing capability attributes: " + strings.Join(missing, ", ")
+	} else {
+		core.Status = Pass
 	}
-	res.Status = Pass
-	return res
+	if _, ok := body["etag"].(map[string]any); ok {
+		etag.Status = Pass
+	} else {
+		etag.Status = Fail
+		etag.Detail = "etag capability not declared"
+	}
+	return []Result{core, etag}
 }
 
 func (r *Runner) schemasEndpoint(ctx context.Context) Result {

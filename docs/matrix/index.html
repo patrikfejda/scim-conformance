@@ -29,142 +29,161 @@ advisory checks record real-world deviations without failing a run. Failure deta
 in the cell title (hover). Findings write-ups live in
 <a href="https://github.com/patrikfejda/scim-conformance/tree/main/docs/findings">docs/findings</a>.</p>
 <table>
-<thead><tr><th>Check</th><th>Reference</th><th>Keycloak 26.7.4 (native SCIM preview)</th><th>scim2-server 0.3.0 (Yaal Coop)</th><th>scimgateway 6.2.10 (plugin-loki)</th></tr></thead>
+<thead><tr><th>Check</th><th>Reference</th><th>Keycloak 26.7.4 (native SCIM preview)</th><th>scim2-server 0.3.0 (Yaal Coop)</th><th>scimgateway 6.2.10 (plugin-loki)</th><th>i2scim 0.10.4 (memory)</th></tr></thead>
 <tbody>
 <tr>
 <td><code>discovery-spconfig</code><br>GET /ServiceProviderConfig returns 200 with the ServiceProviderConfig schema <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §4, RFC 7643 §5</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>discovery-spconfig-mediatype</code><br>response Content-Type is application/scim&#43;json <span class="sev">(advisory)</span></td>
 <td class="ref">RFC 7644 §3.1</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell fail" title="got &#34;&#34;">fail</td>
 </tr>
 <tr>
-<td><code>discovery-spconfig-capabilities</code><br>ServiceProviderConfig declares patch, filter, bulk, sort, changePassword and etag capabilities <span class="sev">(required)</span></td>
+<td><code>discovery-spconfig-capabilities</code><br>ServiceProviderConfig declares patch, filter, bulk, sort and changePassword capabilities <span class="sev">(required)</span></td>
 <td class="ref">RFC 7643 §5</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>discovery-spconfig-etag</code><br>ServiceProviderConfig declares the etag capability <span class="sev">(advisory)</span></td>
+<td class="ref">RFC 7643 §5</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell fail" title="etag capability not declared">fail</td>
 </tr>
 <tr>
 <td><code>discovery-schemas</code><br>GET /Schemas returns 200 and includes the core User schema <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §4</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>discovery-resourcetypes</code><br>GET /ResourceTypes returns 200 and includes a User resource type <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §4</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-create-minimal</code><br>POST /Users with a spec-minimal user (userName only) is accepted <span class="sev">(advisory)</span></td>
 <td class="ref">RFC 7643 §4.1, RFC 7644 §3.3</td>
-<td class="cell fail" title="expected 201, got 400 (body: {&#34;schemas&#34;:[&#34;urn:ietf:params:scim:api:messages:2.0:Error&#34;],&#34;status&#34;:&#34;400&#34;,&#34;scimType&#34;:&#34;invalidSyntax&#34;,&#34;detail&#34;:&#34;Please specify lastName.&#34;})">fail</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell fail" title="expected 201, got 400 (body: {&#34;schemas&#34;:[&#34;urn:ietf:params:scim:api:messages:2.0:Error&#34;],&#34;status&#34;:&#34;400&#34;,&#34;scimType&#34;:&#34;invalidSyntax&#34;,&#34;detail&#34;:&#34;Please specify lastName.&#34;})">fail</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-create</code><br>POST /Users returns 201 and an id (enriched user after minimal was rejected) <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.3</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-get</code><br>GET /Users/{id} returns the created user with matching userName <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.4.1</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-get-notfound</code><br>GET on a nonexistent user returns 404 with a SCIM error body <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.12</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-filter-eq</code><br>GET /Users?filter=userName eq &#34;...&#34; returns a ListResponse containing the user <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.4.2.2</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-filter-caseinsensitive</code><br>a filter using lowercase attribute name (username eq &#34;...&#34;) matches like userName <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.4.2.2</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell fail" title="expected totalResults 1, got 0">fail</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell fail" title="expected totalResults 1, got 0">fail</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-filter-nomatch</code><br>a filter matching no users returns 200 with an empty ListResponse (totalResults 0) <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.4.2.2</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-list-all</code><br>GET /Users without parameters returns a ListResponse with totalResults and Resources <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.4.2</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-pagination-shape</code><br>a paged request (startIndex=1&amp;count=1) returns startIndex and itemsPerPage <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.4.2.4</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-pagination-count-bound</code><br>a paged request returns no more resources than count <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.4.2.4</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-attributes-param</code><br>GET /Users/{id}?attributes=userName returns userName and omits unrequested attributes <span class="sev">(advisory)</span></td>
 <td class="ref">RFC 7644 §3.4.2.5</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-replace-put</code><br>PUT /Users/{id} replaces the user; the change is visible on a subsequent GET <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.5.1</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-replace-readback</code><br>attributes echoed in the PUT response are actually persisted (no silent drops) <span class="sev">(advisory)</span></td>
 <td class="ref">RFC 7644 §3.5.1</td>
-<td class="cell fail" title="PUT response echoed displayName &#34;SCIM Conformance (updated)&#34; but GET returns &#34;&#34;">fail</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell fail" title="PUT response echoed displayName &#34;SCIM Conformance (updated)&#34; but GET returns &#34;&#34;">fail</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-patch-replace</code><br>PATCH /Users/{id} with a replace op is applied (or the server declares PATCH unsupported) <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.5.2</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-patch-add-multivalued</code><br>PATCH add on &#34;emails&#34; appends a value (verified via GET) <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.5.2.1</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell fail" title="expected 200 or 204, got 500 (body: &lt;!doctype html&gt;
+&lt;html lang=&#34;en&#34;&gt;
+&lt;head&gt;
+    &lt;title&gt;Internal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-6&lt;/title&gt;
+    &lt;meta charset=&#34;utf-8&#34;&gt;
+    &lt;style&gt;html, body {
+    margin: 0;
+   )">fail</td>
 </tr>
 <tr>
 <td><code>user-patch-valuepath</code><br>PATCH replace via value filter path (emails[type eq &#34;work&#34;].value) is applied (verified via GET) <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.5.2</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell skip" title="depends on the added work email">skip</td>
 </tr>
 <tr>
 <td><code>user-delete</code><br>DELETE /Users/{id} returns 204 <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.6</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>user-delete-verified</code><br>GET after DELETE returns 404 <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.6</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>group-create</code><br>POST /Groups with displayName returns 201 and an id <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.3, RFC 7643 §4.2</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>group-get</code><br>GET /Groups/{id} returns the created group with matching displayName <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.4.1</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 <tr>
 <td><code>group-patch-add-member</code><br>PATCH add on members adds a user to the group (verified via GET) <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.5.2.1, RFC 7643 §4.2</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell fail" title="expected 200 or 204, got 500 (body: &lt;!doctype html&gt;
+&lt;html lang=&#34;en&#34;&gt;
+&lt;head&gt;
+    &lt;title&gt;Internal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-7&lt;/title&gt;
+    &lt;meta charset=&#34;utf-8&#34;&gt;
+    &lt;style&gt;html, body {
+    margin: 0;
+   )">fail</td>
 </tr>
 <tr>
 <td><code>group-delete</code><br>DELETE /Groups/{id} returns 204 and the group is gone <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.6</td>
-<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+<td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
 </tr>
 </tbody>
 </table>
