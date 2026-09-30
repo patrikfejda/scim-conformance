@@ -49,11 +49,25 @@ go run ./cmd/matrix-gen -o docs/matrix/index.html "Name=docs/matrix/<impl>.json"
 
 All findings are verified manually beyond the runner before being written up; upstream reports are being prepared.
 
+## Client-testing mode (prototype)
+
+The other side of provisioning is the client — the IdP or connector that *sends* SCIM (Keycloak's keycloak-scim, Entra, Okta, authentik's outbound provider). Nothing in the ecosystem tests that side. `scim-mockserver` is a compliant mock provider that grades whatever client is pointed at it:
+
+```
+scim-mockserver --addr :8123
+# point your SCIM client at http://<host>:8123, provision some users,
+# then Ctrl-C for the client-behaviour report (add --json for machine output)
+```
+
+It records, per RFC 7643/7644: whether the client discovers the server (`/ServiceProviderConfig`) before provisioning, sends `application/scim+json`, declares the correct resource `schemas`, omits the server-managed `id` on create, and sends well-formed `PatchOp` bodies with valid `add`/`remove`/`replace` operations. Observations are de-duplicated, so a client provisioning 500 users yields one line per distinct behaviour, not 500.
+
+This is the prototype for the funded milestone; the first real target is libre.sh's [keycloak-scim](https://forge.libre.sh/libre.sh/keycloak-scim) client extension (coordinated with its maintainers).
+
 ## Roadmap
 
 - More RFC 7644 coverage: PATCH on multi-valued attributes, filter grammar corners, `excludedAttributes`, pagination
 - RFC 9865 (cursor pagination), RFC 9967 (SCIM events over SET), RFC 9944 (device schema) test packs
-- Client/provisioner testing mode (scripted mock server + wire-log assertions)
+- Client/provisioner testing mode: scenario scripting (drive the client through joiner–mover–leaver), wire-log capture, and behavioural assertions beyond the current request-shape checks
 - Public interop matrix: Keycloak native SCIM, authentik, Zitadel, Univention Nubus, scimgateway, …
 - Machine-readable deviation corpus with per-implementation quirk flags
 
