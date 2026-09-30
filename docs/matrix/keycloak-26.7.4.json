@@ -183,8 +183,7 @@
       "description": "PATCH add on members adds a user to the group (verified via GET)",
       "reference": "RFC 7644 §3.5.2.1, RFC 7643 §4.2",
       "severity": "required",
-      "status": "fail",
-      "detail": "member \"0a3722dc-3d1e-4d34-a690-e5c5b51d5dad\" not present in group on GET (members: \u003cnil\u003e)"
+      "status": "pass"
     },
     {
       "id": "group-delete",
@@ -194,9 +193,9 @@
       "status": "pass"
     }
   ],
-  "passed": 24,
-  "failed": 3,
+  "passed": 25,
+  "failed": 2,
   "skipped": 0,
   "errored": 0,
-  "requiredFailures": 1
+  "requiredFailures": 0
 }

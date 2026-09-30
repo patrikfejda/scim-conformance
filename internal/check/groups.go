@@ -142,28 +142,36 @@ func (r *Runner) groupAddMember(ctx context.Context, groupID, userID string, cap
 		res.Detail = fmt.Sprintf("expected 200 or 204, got %d (body: %.200s)", resp.StatusCode, resp.Body)
 		return res
 	}
-	getResp, err := r.Client.Do(ctx, http.MethodGet, "/Groups/"+url.PathEscape(groupID), nil)
-	if err != nil {
-		res.Status = Error
-		res.Detail = err.Error()
+	// The Group.members attribute is treated as returned-on-request by
+	// several servers (e.g. Keycloak) for performance, so verify by
+	// explicitly requesting it — a plain GET may legitimately omit it.
+	if r.groupHasMember(ctx, groupID, userID) {
+		res.Status = Pass
 		return res
 	}
-	body, jsonErr := getResp.JSON()
-	if jsonErr != nil {
-		res.Status = Fail
-		res.Detail = jsonErr.Error()
-		return res
+	res.Status = Fail
+	res.Detail = fmt.Sprintf("member %q not present in group even when requested via ?attributes=members", userID)
+	return res
+}
+
+// groupHasMember GETs the group requesting members explicitly and reports
+// whether userID is among them.
+func (r *Runner) groupHasMember(ctx context.Context, groupID, userID string) bool {
+	resp, err := r.Client.Do(ctx, http.MethodGet, "/Groups/"+url.PathEscape(groupID)+"?attributes=members", nil)
+	if err != nil {
+		return false
+	}
+	body, err := resp.JSON()
+	if err != nil {
+		return false
 	}
 	members, _ := body["members"].([]any)
 	for _, m := range members {
 		if obj, ok := m.(map[string]any); ok && obj["value"] == userID {
-			res.Status = Pass
-			return res
+			return true
 		}
 	}
-	res.Status = Fail
-	res.Detail = fmt.Sprintf("member %q not present in group on GET (members: %v)", userID, body["members"])
-	return res
+	return false
 }
 
 func (r *Runner) deleteGroup(ctx context.Context, id string) Result {

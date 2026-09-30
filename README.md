@@ -43,7 +43,7 @@ go run ./cmd/matrix-gen -o docs/matrix/index.html "Name=docs/matrix/<impl>.json"
 
 | Implementation | Result | Findings |
 |---|---|---|
-| Keycloak 26.7.4 native SCIM (preview) | 24/27 pass, 3 findings | [/Schemas contradicts enforced user-profile requirements + wrong `scimType`; `displayName` echoed in write responses but silently dropped; **PATCH-adding group members returns 200 but is silently ignored while PUT honestly rejects it**](docs/findings/keycloak-26.7.4.md) |
+| Keycloak 26.7.4 native SCIM (preview) | 25/27 pass, 2 advisory findings | [/Schemas contradicts enforced user-profile requirements + wrong `scimType`; `displayName` echoed in write responses but silently dropped](docs/findings/keycloak-26.7.4.md) (one earlier candidate was a runner false-positive, [retracted](docs/findings/keycloak-26.7.4.md)) |
 | scim2-server 0.3.0 (Yaal Coop) | 27/27 pass | clean run — no deviations observed in the current check set |
 | scimgateway 6.2.10 (plugin-loki) | 26/27 pass, 1 finding | [attribute names in filters are case-sensitive; lowercase `username` silently returns an empty result](docs/findings/scimgateway-6.2.10.md) |
 

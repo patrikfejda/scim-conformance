@@ -39,23 +39,13 @@ GET /Users/{id}                                     -> 200, displayName ABSENT
 
 Options upstream: persist the attribute, reject writes to it with `400`/`invalidValue`, or at minimum stop echoing it and remove it from the published schema.
 
-## Finding 3: PATCH-adding group members returns 200 but is silently ignored — while PUT honestly rejects the same operation
+## Retracted candidate: "PATCH-add group member is silently ignored"
 
-Group membership management on updates is not supported by the preview SCIM API, but the two update verbs surface this inconsistently (verified 2026-09-30):
+An earlier draft of this document claimed PATCH-adding a group member returned 200 but did nothing. **This was a false positive in our own runner, not a Keycloak bug, and was retracted on 2026-09-30 before being reported anywhere.** Recorded here because honest correction is part of the tool's value.
 
-```
-PATCH /Groups/{id} {"Operations":[{"op":"add","path":"members","value":[{"value":"<userId>"}]}]}
--> 200 OK (response body: the group, without members)
-GET /Groups/{id}
--> 200, members ABSENT
+What actually happens: PATCH `add`/`replace` on `members` *does* persist — verified via the Keycloak admin API (the user appears in the group and vice-versa) and via SCIM `GET /Groups/{id}?attributes=members`. Keycloak treats `members` as returned-on-request and omits it from a plain `GET /Groups/{id}`; our check had done a plain GET and wrongly concluded the add failed. The runner now verifies membership with an explicit `?attributes=members` request.
 
-PUT /Groups/{id} {"...", "members":[{"value":"<userId>"}]}
--> 400 {"scimType":"invalidSyntax","detail":"Managing members on updates is not supported"}
-```
-
-The server demonstrably knows the limitation — PUT says so — yet PATCH reports success and drops the operation. Group membership propagation is the core joiner–mover–leaver use case: a provisioning IdP that PATCHes memberships receives 200 and assumes success, silently desynchronizing group state. (Also: `invalidSyntax` on the PUT is again the wrong `scimType` for an unsupported-operation condition; RFC 7644 §3.12 offers `mutability`/`invalidValue`.)
-
-Expected: PATCH on `members` should return the same explicit 400 (or be implemented), and `/ServiceProviderConfig`/`/Schemas` should reflect the limitation.
+(One genuinely spec-adjacent note remains, not filed as a bug: PUT with a `members` array returns `400 "Managing members on updates is not supported"` with `scimType:"invalidSyntax"` — where RFC 7644 §3.12 would suggest `invalidValue`/`mutability`. This is the same scimType nuance as Finding 1 and is folded into that discussion rather than raised separately.)
 
 ## Reproduction
 
