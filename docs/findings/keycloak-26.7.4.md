@@ -39,6 +39,8 @@ GET /Users/{id}                                     -> 200, displayName ABSENT
 
 Options upstream: persist the attribute, reject writes to it with `400`/`invalidValue`, or at minimum stop echoing it and remove it from the published schema.
 
+**Update (2026-09-30, verified against `nightly` / 999.0.0-SNAPSHOT):** the write response no longer echoes `displayName` — on 26.7.4 a PUT with `displayName` returns it in the body (`"Echo Test"`), on nightly the same PUT returns no `displayName`. So the echo/misrepresentation half is already resolved upstream. What remains on nightly: `displayName` is still declared in the User `/Schemas` (it is registered unconditionally in `UserCoreModelSchema` but not mapped to a user-profile attribute), so a client discovering capabilities via `/Schemas` still expects an attribute the server will not store. Reported on keycloak/keycloak#53352.
+
 ## Retracted candidate: "PATCH-add group member is silently ignored"
 
 An earlier draft of this document claimed PATCH-adding a group member returned 200 but did nothing. **This was a false positive in our own runner, not a Keycloak bug, and was retracted on 2026-09-30 before being reported anywhere.** Recorded here because honest correction is part of the tool's value.
