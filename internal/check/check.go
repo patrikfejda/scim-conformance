@@ -55,5 +55,6 @@ type Runner struct {
 func (r *Runner) RunAll(ctx context.Context) []Result {
 	results, caps := r.Discovery(ctx)
 	results = append(results, r.UserLifecycle(ctx, caps)...)
+	results = append(results, r.GroupLifecycle(ctx, caps)...)
 	return results
 }

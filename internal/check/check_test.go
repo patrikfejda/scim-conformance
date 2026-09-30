@@ -19,12 +19,17 @@ import (
 type mockSCIM struct {
 	mu        sync.Mutex
 	users     map[string]map[string]any
+	groups    map[string]map[string]any
 	nextID    int
 	overrides map[string]http.HandlerFunc // key: "METHOD /path-prefix"
 }
 
 func newMockSCIM() *mockSCIM {
-	return &mockSCIM{users: map[string]map[string]any{}, overrides: map[string]http.HandlerFunc{}}
+	return &mockSCIM{
+		users:     map[string]map[string]any{},
+		groups:    map[string]map[string]any{},
+		overrides: map[string]http.HandlerFunc{},
+	}
 }
 
 func writeSCIM(w http.ResponseWriter, status int, body any) {
@@ -87,8 +92,57 @@ func (m *mockSCIM) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m.listUsers(w, r)
 	case strings.HasPrefix(r.URL.Path, "/Users/"):
 		m.userByID(w, r, strings.TrimPrefix(r.URL.Path, "/Users/"))
+	case r.Method == http.MethodPost && r.URL.Path == "/Groups":
+		var group map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&group); err != nil {
+			scimError(w, 400)
+			return
+		}
+		m.nextID++
+		id := fmt.Sprintf("g%d", m.nextID)
+		group["id"] = id
+		m.groups[id] = group
+		writeSCIM(w, 201, group)
+	case strings.HasPrefix(r.URL.Path, "/Groups/"):
+		m.groupByID(w, r, strings.TrimPrefix(r.URL.Path, "/Groups/"))
 	default:
 		scimError(w, 404)
+	}
+}
+
+func (m *mockSCIM) groupByID(w http.ResponseWriter, r *http.Request, id string) {
+	group, ok := m.groups[id]
+	if !ok {
+		scimError(w, 404)
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		writeSCIM(w, 200, group)
+	case http.MethodPatch:
+		var op struct {
+			Operations []struct {
+				Op, Path string
+				Value    any
+			}
+		}
+		if err := json.NewDecoder(r.Body).Decode(&op); err != nil {
+			scimError(w, 400)
+			return
+		}
+		for _, o := range op.Operations {
+			if strings.EqualFold(o.Op, "add") && o.Path == "members" {
+				vals, _ := o.Value.([]any)
+				existing, _ := group["members"].([]any)
+				group["members"] = append(existing, vals...)
+			}
+		}
+		writeSCIM(w, 200, group)
+	case http.MethodDelete:
+		delete(m.groups, id)
+		w.WriteHeader(204)
+	default:
+		scimError(w, 400)
 	}
 }
 
@@ -223,6 +277,28 @@ func TestCompliantServerPassesAllRequiredChecks(t *testing.T) {
 		if r.Severity == Required && r.Status != Pass {
 			t.Errorf("check %s: expected pass, got %s (%s)", r.ID, r.Status, r.Detail)
 		}
+	}
+	if res := byID(t, results, "group-patch-add-member"); res.Status != Pass {
+		t.Fatalf("group membership check missing or failing: %s (%s)", res.Status, res.Detail)
+	}
+}
+
+func TestSilentlyIgnoredGroupMemberAddIsDetected(t *testing.T) {
+	m := newMockSCIM()
+	m.overrides["PATCH /Groups/"] = func(w http.ResponseWriter, r *http.Request) {
+		// 200 OK, but membership never stored — the silent-drop pattern.
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		id := strings.TrimPrefix(r.URL.Path, "/Groups/")
+		if g, ok := m.groups[id]; ok {
+			writeSCIM(w, 200, g)
+			return
+		}
+		scimError(w, 404)
+	}
+	res := byID(t, runAll(t, m), "group-patch-add-member")
+	if res.Status != Fail {
+		t.Fatalf("expected fail, got %s (%s)", res.Status, res.Detail)
 	}
 }
 

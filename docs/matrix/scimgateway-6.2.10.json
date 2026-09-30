@@ -162,9 +162,37 @@
       "reference": "RFC 7644 §3.6",
       "severity": "required",
       "status": "pass"
+    },
+    {
+      "id": "group-create",
+      "description": "POST /Groups with displayName returns 201 and an id",
+      "reference": "RFC 7644 §3.3, RFC 7643 §4.2",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "group-get",
+      "description": "GET /Groups/{id} returns the created group with matching displayName",
+      "reference": "RFC 7644 §3.4.1",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "group-patch-add-member",
+      "description": "PATCH add on members adds a user to the group (verified via GET)",
+      "reference": "RFC 7644 §3.5.2.1, RFC 7643 §4.2",
+      "severity": "required",
+      "status": "pass"
+    },
+    {
+      "id": "group-delete",
+      "description": "DELETE /Groups/{id} returns 204 and the group is gone",
+      "reference": "RFC 7644 §3.6",
+      "severity": "required",
+      "status": "pass"
     }
   ],
-  "passed": 22,
+  "passed": 26,
   "failed": 1,
   "skipped": 0,
   "errored": 0,
