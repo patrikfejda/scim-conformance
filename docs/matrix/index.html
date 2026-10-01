@@ -137,11 +137,11 @@ in the cell title (hover). Findings write-ups live in
 <td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell fail" title="expected 200 or 204, got 500 (body: &lt;!doctype html&gt;
 &lt;html lang=&#34;en&#34;&gt;
 &lt;head&gt;
-    &lt;title&gt;Internal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-6&lt;/title&gt;
+    &lt;title&gt;Internal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-10&lt;/title&gt;
     &lt;meta charset=&#34;utf-8&#34;&gt;
     &lt;style&gt;html, body {
     margin: 0;
-   )">fail</td>
+  )">fail</td>
 </tr>
 <tr>
 <td><code>user-patch-valuepath</code><br>PATCH replace via value filter path (emails[type eq &#34;work&#34;].value) is applied (verified via GET) <span class="sev">(required)</span></td>
@@ -174,16 +174,51 @@ in the cell title (hover). Findings write-ups live in
 <td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell fail" title="expected 200 or 204, got 500 (body: &lt;!doctype html&gt;
 &lt;html lang=&#34;en&#34;&gt;
 &lt;head&gt;
-    &lt;title&gt;Internal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-7&lt;/title&gt;
+    &lt;title&gt;Internal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-11&lt;/title&gt;
     &lt;meta charset=&#34;utf-8&#34;&gt;
     &lt;style&gt;html, body {
     margin: 0;
-   )">fail</td>
+  )">fail</td>
 </tr>
 <tr>
 <td><code>group-delete</code><br>DELETE /Groups/{id} returns 204 and the group is gone <span class="sev">(required)</span></td>
 <td class="ref">RFC 7644 §3.6</td>
 <td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td><td class="cell pass">pass</td>
+</tr>
+<tr>
+<td><code>rfc9865-spc-pagination</code><br>ServiceProviderConfig advertises cursor pagination with required boolean cursor/index <span class="sev">(advisory)</span></td>
+<td class="ref">RFC 9865 §4</td>
+<td class="cell skip" title="no pagination capability advertised (RFC 9865 not supported)">skip</td><td class="cell skip" title="no pagination capability advertised (RFC 9865 not supported)">skip</td><td class="cell skip" title="no pagination capability advertised (RFC 9865 not supported)">skip</td><td class="cell skip" title="no pagination capability advertised (RFC 9865 not supported)">skip</td>
+</tr>
+<tr>
+<td><code>rfc9865-no-prevcursor-first</code><br> <span class="sev">(required)</span></td>
+<td class="ref"></td>
+<td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td>
+</tr>
+<tr>
+<td><code>rfc9865-count-ceiling</code><br> <span class="sev">(required)</span></td>
+<td class="ref"></td>
+<td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td>
+</tr>
+<tr>
+<td><code>rfc9865-first-page</code><br> <span class="sev">(required)</span></td>
+<td class="ref"></td>
+<td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td>
+</tr>
+<tr>
+<td><code>rfc9865-follow-cursor</code><br> <span class="sev">(required)</span></td>
+<td class="ref"></td>
+<td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td>
+</tr>
+<tr>
+<td><code>rfc9865-invalid-cursor</code><br> <span class="sev">(required)</span></td>
+<td class="ref"></td>
+<td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td>
+</tr>
+<tr>
+<td><code>rfc9865-count-zero</code><br> <span class="sev">(advisory)</span></td>
+<td class="ref"></td>
+<td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td><td class="cell skip" title="cursor pagination not advertised">skip</td>
 </tr>
 </tbody>
 </table>

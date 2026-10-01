@@ -149,7 +149,7 @@
       "reference": "RFC 7644 §3.5.2.1",
       "severity": "required",
       "status": "fail",
-      "detail": "expected 200 or 204, got 500 (body: \u003c!doctype html\u003e\n\u003chtml lang=\"en\"\u003e\n\u003chead\u003e\n    \u003ctitle\u003eInternal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-6\u003c/title\u003e\n    \u003cmeta charset=\"utf-8\"\u003e\n    \u003cstyle\u003ehtml, body {\n    margin: 0;\n   )"
+      "detail": "expected 200 or 204, got 500 (body: \u003c!doctype html\u003e\n\u003chtml lang=\"en\"\u003e\n\u003chead\u003e\n    \u003ctitle\u003eInternal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-10\u003c/title\u003e\n    \u003cmeta charset=\"utf-8\"\u003e\n    \u003cstyle\u003ehtml, body {\n    margin: 0;\n  )"
     },
     {
       "id": "user-patch-valuepath",
@@ -193,7 +193,7 @@
       "reference": "RFC 7644 §3.5.2.1, RFC 7643 §4.2",
       "severity": "required",
       "status": "fail",
-      "detail": "expected 200 or 204, got 500 (body: \u003c!doctype html\u003e\n\u003chtml lang=\"en\"\u003e\n\u003chead\u003e\n    \u003ctitle\u003eInternal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-7\u003c/title\u003e\n    \u003cmeta charset=\"utf-8\"\u003e\n    \u003cstyle\u003ehtml, body {\n    margin: 0;\n   )"
+      "detail": "expected 200 or 204, got 500 (body: \u003c!doctype html\u003e\n\u003chtml lang=\"en\"\u003e\n\u003chead\u003e\n    \u003ctitle\u003eInternal Server Error - Error id b8a47d1b-3c9a-4ec9-ac7e-8815ecf3bb41-11\u003c/title\u003e\n    \u003cmeta charset=\"utf-8\"\u003e\n    \u003cstyle\u003ehtml, body {\n    margin: 0;\n  )"
     },
     {
       "id": "group-delete",
@@ -201,11 +201,67 @@
       "reference": "RFC 7644 §3.6",
       "severity": "required",
       "status": "pass"
+    },
+    {
+      "id": "rfc9865-spc-pagination",
+      "description": "ServiceProviderConfig advertises cursor pagination with required boolean cursor/index",
+      "reference": "RFC 9865 §4",
+      "severity": "advisory",
+      "status": "skip",
+      "detail": "no pagination capability advertised (RFC 9865 not supported)"
+    },
+    {
+      "id": "rfc9865-no-prevcursor-first",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-count-ceiling",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-first-page",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-follow-cursor",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-invalid-cursor",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-count-zero",
+      "description": "",
+      "reference": "",
+      "severity": "advisory",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
     }
   ],
   "passed": 23,
   "failed": 4,
-  "skipped": 1,
+  "skipped": 8,
   "errored": 0,
   "requiredFailures": 2
 }

@@ -196,11 +196,67 @@
       "reference": "RFC 7644 §3.6",
       "severity": "required",
       "status": "pass"
+    },
+    {
+      "id": "rfc9865-spc-pagination",
+      "description": "ServiceProviderConfig advertises cursor pagination with required boolean cursor/index",
+      "reference": "RFC 9865 §4",
+      "severity": "advisory",
+      "status": "skip",
+      "detail": "no pagination capability advertised (RFC 9865 not supported)"
+    },
+    {
+      "id": "rfc9865-no-prevcursor-first",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-count-ceiling",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-first-page",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-follow-cursor",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-invalid-cursor",
+      "description": "",
+      "reference": "",
+      "severity": "required",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
+    },
+    {
+      "id": "rfc9865-count-zero",
+      "description": "",
+      "reference": "",
+      "severity": "advisory",
+      "status": "skip",
+      "detail": "cursor pagination not advertised"
     }
   ],
   "passed": 28,
   "failed": 0,
-  "skipped": 0,
+  "skipped": 7,
   "errored": 0,
   "requiredFailures": 0
 }
