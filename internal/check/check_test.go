@@ -274,8 +274,11 @@ func TestCompliantServerPassesAllRequiredChecks(t *testing.T) {
 		t.Fatalf("expected at least 12 results, got %d", len(results))
 	}
 	for _, r := range results {
-		if r.Severity == Required && r.Status != Pass {
-			t.Errorf("check %s: expected pass, got %s (%s)", r.ID, r.Status, r.Detail)
+		// Skip is legitimate for an optional feature the server does not
+		// offer (e.g. the cursor-pagination pack on a server that does not
+		// advertise it); only Fail/Error on a required check is a problem.
+		if r.Severity == Required && (r.Status == Fail || r.Status == Error) {
+			t.Errorf("check %s: unexpected %s (%s)", r.ID, r.Status, r.Detail)
 		}
 	}
 	if res := byID(t, results, "group-patch-add-member"); res.Status != Pass {

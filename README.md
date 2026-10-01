@@ -27,6 +27,7 @@ Exit code is non-zero when a **required** check fails, so it drops straight into
 | User lifecycle (RFC 7644 §3) | spec-minimal create (advisory) with enriched fallback, create (201 + id), read, 404 error shape (§3.12), filter `eq`, case-insensitive filter attribute names (§3.4.2.2), no-match filter as empty ListResponse, list-all shape, pagination (`startIndex`/`itemsPerPage` presence, `count` bound, §3.4.2.4), `attributes` selection (§3.4.2.5, advisory), PUT replace verified via GET, write-echo persistence (advisory), PATCH replace verified via GET, PATCH add on multi-valued `emails` (§3.5.2.1), PATCH replace via value filter path `emails[type eq "work"].value` (§3.5.2), delete + delete verification |
 
 | Group lifecycle (RFC 7643 §4.2) | create, read, PATCH add member (verified via GET — catches silently ignored membership changes), delete |
+| Cursor pagination (RFC 9865) | gated on `ServiceProviderConfig.pagination.cursor`; first page + count ceiling, no `previousCursor` on first page, follow `nextCursor` to a distinct page, garbage cursor → 400 `invalidCursor`, `count=0` metadata-only. Reports *not applicable* when the server does not advertise cursor pagination |
 
 Writes are never trusted from their responses alone: PUT and PATCH results are verified with a follow-up GET, which is how the suite catches attributes that are echoed back but silently dropped.
 
@@ -67,7 +68,7 @@ This is the prototype for the funded milestone; the first real target is libre.s
 ## Roadmap
 
 - More RFC 7644 coverage: PATCH on multi-valued attributes, filter grammar corners, `excludedAttributes`, pagination
-- RFC 9865 (cursor pagination), RFC 9967 (SCIM events over SET), RFC 9944 (device schema) test packs
+- RFC 9865 (cursor pagination) — **first pack shipped**; RFC 9967 (SCIM events over SET), RFC 9944 (device schema) next
 - Client/provisioner testing mode: scenario scripting (drive the client through joiner–mover–leaver), wire-log capture, and behavioural assertions beyond the current request-shape checks
 - Public interop matrix: Keycloak native SCIM, authentik, Zitadel, Univention Nubus, scimgateway, …
 - Machine-readable deviation corpus with per-implementation quirk flags
